@@ -1,0 +1,198 @@
+service: serverlessguru-api
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}
+    NODE_ENV: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/*"
+
+functions:
+  # Create Item
+  createItem:
+    handler: src/functions/create.handler
+    events:
+      - http:
+          path: /items
+          method: post
+          cors: true
+          request:
+            schemas:
+              application/json: ${file(src/models/create-item-schema.json)}
+          response:
+            headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Credentials: "'true'"
+
+  # Get Single Item
+  getItem:
+    handler: src/functions/get.handler
+    events:
+      - http:
+          path: /items/{id}
+          method: get
+          cors: true
+          request:
+            parameters:
+              paths:
+                id: true
+          response:
+            headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Credentials: "'true'"
+
+  # List Items
+  listItems:
+    handler: src/functions/list.handler
+    events:
+      - http:
+          path: /items
+          method: get
+          cors: true
+          request:
+            parameters:
+              querystrings:
+                limit: false
+                page: false
+          response:
+            headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Credentials: "'true'"
+
+  # Update Item
+  updateItem:
+    handler: src/functions/update.handler
+    events:
+      - http:
+          path: /items/{id}
+          method: put
+          cors: true
+          request:
+            parameters:
+              paths:
+                id: true
+            schemas:
+              application/json: ${file(src/models/update-item-schema.json)}
+          response:
+            headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Credentials: "'true'"
+
+  # Delete Item
+  deleteItem:
+    handler: src/functions/delete.handler
+    events:
+      - http:
+          path: /items/{id}
+          method: delete
+          cors: true
+          request:
+            parameters:
+              paths:
+                id: true
+          response:
+            headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Credentials: "'true'"
+
+  # Health Check
+  healthCheck:
+    handler: src/functions/health.handler
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+          response:
+            headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Credentials: "'true'"
+
+resources:
+  Resources:
+    # DynamoDB Table
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification:
+          SSEEnabled: true
+        Tags:
+          - Key: Environment
+            Value: ${self:provider.stage}
+          - Key: Service
+            Value: ${self:service}
+
+    # API Gateway CORS
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    GatewayResponseDefault5XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        ResponseType: DEFAULT_5XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+custom:
+  # Stage-specific configurations
+  stages:
+    dev:
+      cors: true
+      logLevel: info
+    prod:
+      cors: true
+      logLevel: error
+
+  # Table name for different stages
+  tableName: ${self:service}-${self:provider.stage}
+
+plugins:
+  - serverless-offline
+
+# Package configuration
+package:
+  exclude:
+    - node_modules/**
+    - tests/**
+    - .git/**
+    - .env*
+    - README.md
+    - jest.config.js
+    - tsconfig.json
+    - .cursor/** 

@@ -1,0 +1,41 @@
+# Node.js
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+dist/
+build/
+coverage/
+
+# dotenv environment variables
+.env
+.env.*
+
+# Serverless
+.serverless/
+
+# Mac system files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Jest coverage
+coverage/
+
+# AWS credentials
+.aws/
+
+# Ignore private config
+private-folder-alias.json
+
+# Misc
+*.tgz
+*.swp
+*.swo
