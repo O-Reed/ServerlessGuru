@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/O-Reed/ServerlessGuru#readme",
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.150",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.13",
     "@types/uuid": "^10.0.0",
