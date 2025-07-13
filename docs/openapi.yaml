@@ -1,0 +1,478 @@
+openapi: 3.0.3
+info:
+  title: ServerlessGuru REST API
+  description: A production-ready REST API built with AWS Serverless Framework
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@serverlessguru.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://{api-id}.execute-api.{region}.amazonaws.com/{stage}
+    description: AWS API Gateway
+    variables:
+      api-id:
+        description: API Gateway ID
+        default: "your-api-id"
+      region:
+        description: AWS Region
+        default: "us-east-1"
+      stage:
+        description: Deployment stage
+        default: "dev"
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check the health status of the API
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                timestamp: "2024-01-01T00:00:00.000Z"
+                version: "1.0.0"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items:
+    get:
+      summary: List Items
+      description: Retrieve a list of items with optional filtering and pagination
+      tags:
+        - Items
+      parameters:
+        - name: limit
+          in: query
+          description: Number of items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: category
+          in: query
+          description: Filter by category
+          required: false
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, name, price]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          description: Sort order
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: lastEvaluatedKey
+          in: query
+          description: Pagination token
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of items retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemListResponse'
+              example:
+                items:
+                  - id: "item-123"
+                    name: "Sample Item"
+                    description: "A sample item description"
+                    category: "electronics"
+                    price: 99.99
+                    tags: ["new", "featured"]
+                    createdAt: "2024-01-01T00:00:00.000Z"
+                    updatedAt: "2024-01-01T00:00:00.000Z"
+                lastEvaluatedKey: "item-123"
+                count: 1
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Item
+      description: Create a new item
+      tags:
+        - Items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+            example:
+              name: "Sample Item"
+              description: "A sample item description"
+              category: "electronics"
+              price: 99.99
+              tags: ["new", "featured"]
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+              example:
+                id: "item-123"
+                name: "Sample Item"
+                description: "A sample item description"
+                category: "electronics"
+                price: 99.99
+                tags: ["new", "featured"]
+                createdAt: "2024-01-01T00:00:00.000Z"
+                updatedAt: "2024-01-01T00:00:00.000Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Invalid input data"
+                  details:
+                    field: "price"
+                    issue: "Price must be a positive number"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/{id}:
+    get:
+      summary: Get Item
+      description: Retrieve a specific item by ID
+      tags:
+        - Items
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "ITEM_NOT_FOUND"
+                  message: "Item with ID 'item-123' not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update Item
+      description: Update an existing item
+      tags:
+        - Items
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+            example:
+              name: "Updated Item Name"
+              price: 149.99
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete Item
+      description: Delete an item by ID
+      tags:
+        - Items
+      parameters:
+        - name: id
+          in: path
+          description: Item ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Item deleted successfully
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Health status of the API
+        timestamp:
+          type: string
+          format: date-time
+          description: Current timestamp
+        version:
+          type: string
+          description: API version
+
+    Item:
+      type: object
+      required:
+        - id
+        - name
+        - category
+        - price
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique item identifier
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Item name
+        description:
+          type: string
+          maxLength: 500
+          description: Item description
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Item category
+        price:
+          type: number
+          minimum: 0
+          description: Item price
+        tags:
+          type: array
+          items:
+            type: string
+          description: Item tags
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    CreateItemRequest:
+      type: object
+      required:
+        - name
+        - category
+        - price
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Item name
+        description:
+          type: string
+          maxLength: 500
+          description: Item description
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Item category
+        price:
+          type: number
+          minimum: 0
+          description: Item price
+        tags:
+          type: array
+          items:
+            type: string
+          description: Item tags
+
+    UpdateItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Item name
+        description:
+          type: string
+          maxLength: 500
+          description: Item description
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Item category
+        price:
+          type: number
+          minimum: 0
+          description: Item price
+        tags:
+          type: array
+          items:
+            type: string
+          description: Item tags
+
+    ItemResponse:
+      allOf:
+        - $ref: '#/components/schemas/Item'
+
+    ItemListResponse:
+      type: object
+      required:
+        - items
+        - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+          description: List of items
+        lastEvaluatedKey:
+          type: string
+          description: Pagination token for next page
+        count:
+          type: integer
+          minimum: 0
+          description: Number of items returned
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code
+              enum:
+                - VALIDATION_ERROR
+                - ITEM_NOT_FOUND
+                - INTERNAL_ERROR
+                - UNAUTHORIZED
+                - FORBIDDEN
+            message:
+              type: string
+              description: Error message
+            details:
+              type: object
+              description: Additional error details
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Items
+    description: Item management endpoints 
